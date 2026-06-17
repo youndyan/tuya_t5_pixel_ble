@@ -1,0 +1,21 @@
+# Build
+.build/
+dist/
+.cache/
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Local license (never commit real keys)
+include/pixel_agent_license.h
+
+# Bridge local bind (per-machine)
+tools/pixel-agent-bridge-ble/node_modules/
+tools/pixel-agent-bridge-ble/.pixel-ble-address
+tools/pixel-agent-bridge-ble/.pixel-ble-bind.json
+
+# Archives / local bundles
+tools/*.zip

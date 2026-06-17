@@ -1,0 +1,21 @@
+{
+  "name": "pixel-agent-bridge-ble",
+  "version": "1.0.4",
+  "description": "BLE/serial bridge fork (tuya_t5_pixel_demo_ble): Agent hooks -> T5 pixel",
+  "main": "bridge.js",
+  "scripts": {
+    "start": "node bridge.js --ble",
+    "start:serial": "node bridge.js",
+    "start:ble": "node bridge.js --ble --ble-only",
+    "start:dual": "node bridge.js --ble",
+    "setup:ble": "node -e \"const {spawnSync}=require('child_process');const py=process.env.PIXEL_PYTHON||(process.platform==='win32'?'python':'python3');const r=spawnSync(py,['-m','pip','install','bleak'],{stdio:'inherit'});process.exit(r.status??1)\"",
+    "list-ports": "node list-ports.js",
+    "scan:ble": "python3 ble_bridge.py --scan",
+    "bind:ble": "python3 ble_bridge.py --resolve-bind",
+    "install-hooks": "node install-hooks.js"
+  },
+  "dependencies": {
+    "serialport": "^12.0.0"
+  },
+  "license": "MIT"
+}

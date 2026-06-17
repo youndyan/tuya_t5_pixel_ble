@@ -1,0 +1,19 @@
+/**
+ * @file pixel_agent_license.h.example
+ * @brief Copy to pixel_agent_license.h and fill your Tuya license (do not commit real keys)
+ * @copyright Copyright (c) Tuya Inc.
+ */
+#ifndef __PIXEL_AGENT_LICENSE_H__
+#define __PIXEL_AGENT_LICENSE_H__
+
+#ifndef TUYA_PRODUCT_ID
+#define TUYA_PRODUCT_ID      "your_product_id"
+#endif
+#ifndef TUYA_OPENSDK_UUID
+#define TUYA_OPENSDK_UUID    "uuidxxxxxxxxxxxxxxxx"
+#endif
+#ifndef TUYA_OPENSDK_AUTHKEY
+#define TUYA_OPENSDK_AUTHKEY "your_32_char_authkey_here________"
+#endif
+
+#endif /* __PIXEL_AGENT_LICENSE_H__ */

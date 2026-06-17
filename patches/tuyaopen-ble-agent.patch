@@ -1,0 +1,324 @@
+diff --git a/src/tal_bluetooth/nimble/tkl_bluetooth.c b/src/tal_bluetooth/nimble/tkl_bluetooth.c
+index bdb99291..6f3a7ca1 100644
+--- a/src/tal_bluetooth/nimble/tkl_bluetooth.c
++++ b/src/tal_bluetooth/nimble/tkl_bluetooth.c
+@@ -14,6 +14,18 @@
+ #include "tkl_hci.h"
+ #include "tal_memory.h"
+ 
++/**
++ * @brief Optional hook for ASCII agent lines (S:/P:) written over GATT
++ * @param[in] data write payload
++ * @param[in] len byte count
++ * @return none
++ */
++__attribute__((weak)) void tuya_ble_agent_line_passthrough(const uint8_t *data, uint16_t len)
++{
++    (void)data;
++    (void)len;
++}
++
+ #if (TY_HS_BLE_ROLE_CENTRAL)
+ typedef struct {
+     uint8_t role; /*< Refer to @ TKL_BLE_ROLE_SERVER and TKL_BLE_ROLE_CLIENT */
+@@ -271,6 +283,14 @@ static int tuya_ble_host_write_callback(uint16_t conn_handle, uint16_t attr_hand
+ 
+     case BLE_GATT_ACCESS_OP_WRITE_CHR:
+         while (om) {
++            if (om->om_len >= 3 && om->om_data[1] == ':' &&
++                (om->om_data[0] == 'S' || om->om_data[0] == 'P' || om->om_data[0] == 'L' ||
++                 om->om_data[0] == 'I')) {
++                tuya_ble_agent_line_passthrough((uint8_t *)om->om_data, om->om_len);
++                om = SLIST_NEXT(om, om_next);
++                continue;
++            }
++
+             gatt_event.type = TKL_BLE_GATT_EVT_WRITE_REQ;
+             gatt_event.conn_handle = conn_handle;
+             gatt_event.gatt_event.write_report.char_handle = attr_handle;
+@@ -1225,18 +1245,18 @@ OPERATE_RET tkl_ble_gatts_value_indicate(uint16_t conn_handle, uint16_t char_han
+  * */
+ OPERATE_RET tkl_ble_gatts_exchange_mtu_reply(uint16_t conn_handle, uint16_t server_rx_mtu)
+ {
++    (void)conn_handle;
+     if (!ble_hs_is_enabled()) {
+         BLE_HS_LOG_INFO("bt_stack close,bt operation invalid.\n");
+         return OPRT_OK;
+     }
+-    int rc = 0;
+ 
++    /*
++     * Peripheral: central already completed ATT MTU exchange (BLE_GAP_EVENT_MTU).
++     * Only record preferred MTU; do NOT call ble_gattc_exchange_mtu here — that
++     * initiates a second client-side exchange and drops the link on macOS.
++     */
+     ble_att_set_preferred_mtu(server_rx_mtu);
+-    // Will Use Default MTU Size
+-    rc = ble_gattc_exchange_mtu(conn_handle, tuya_ble_host_mtu_exchange_callback, NULL);
+-    if (rc != 0) {
+-        return OPRT_OS_ADAPTER_BLE_MTU_REPLY_FAILED;
+-    }
+     return OPRT_OK;
+ }
+ 
+diff --git a/src/tuya_cloud_service/ble/ble_mgr.c b/src/tuya_cloud_service/ble/ble_mgr.c
+index 8cfa25ed..0f30b548 100755
+--- a/src/tuya_cloud_service/ble/ble_mgr.c
++++ b/src/tuya_cloud_service/ble/ble_mgr.c
+@@ -27,6 +27,37 @@
+ #include "crc_16.h"
+ #include "uni_random.h"
+ 
++/**
++ * @brief Optional hook for agent NUS transport (pixel_agent_ble.c)
++ * @param[in] msg BLE event from TAL stack
++ * @return none
++ */
++__attribute__((weak)) void tal_ble_agent_event_hook(TAL_BLE_EVT_PARAMS_T *msg)
++{
++    (void)msg;
++}
++
++/**
++ * @brief Optional passthrough for ASCII agent lines (S:/P:) on Tuya write char
++ * @param[in] data write payload
++ * @param[in] len byte count
++ * @return none
++ */
++__attribute__((weak)) void tuya_ble_agent_line_passthrough(const uint8_t *data, uint16_t len)
++{
++    (void)data;
++    (void)len;
++}
++
++/**
++ * @brief Weak hook: keep BLE advertising when MQTT is up (agent monitor over BLE)
++ * @return TRUE to skip tal_ble_advertising_stop() in monitor timer
++ */
++__attribute__((weak)) bool tal_ble_agent_keep_adv(void)
++{
++    return false;
++}
++
+ /** GAP - scan response data (max size = 31 bytes) */
+ #define BLE_SCAN_RSP_DATA_LEN 31
+ /** GAP - Advertisement data (max size = 31 bytes, best kept short to conserve
+@@ -354,8 +385,19 @@ static void ble_adv_update(tuya_ble_mgr_t *ble)
+     rsp_data.p_data = ble->rsp_data;
+     rsp_data.len = ble->rsp_len;
+ 
+-    // Only update the advertising content when Bluetooth is connected
+-    if (ble->is_paired) {
++    /* Never stop/restart advertising while a central is connected — drops the link */
++    if (ble->peer_info.conn_handle != 0) {
++        if (tal_ble_agent_keep_adv()) {
++            PR_DEBUG("ble adv skip (link up, agent transport)");
++            return;
++        }
++        TUYA_CALL_ERR_LOG(tal_ble_advertising_data_update(&adv_data, &rsp_data));
++        PR_NOTICE("ble adv data update (link up) %d", rt);
++        return;
++    }
++
++    /* Agent monitor: restart adv when idle so PC can connect after MQTT online */
++    if (ble->is_paired && !tal_ble_agent_keep_adv()) {
+         TUYA_CALL_ERR_LOG(tal_ble_advertising_data_set(&adv_data, &rsp_data));
+     } else {
+         tal_ble_advertising_stop();
+@@ -383,6 +425,49 @@ int tuya_ble_adv_update(void)
+     return OPRT_OK;
+ }
+ 
++/**
++ * @brief Override BLE GAP advertised device name and refresh advertising
++ * @param[in] name null-terminated name (truncated to TUYA_BLE_NAME_LEN)
++ * @return OPRT_OK on success
++ */
++OPERATE_RET tuya_ble_set_device_name(CONST CHAR_T *name)
++{
++    tuya_ble_mgr_t *ble = s_ble_mgr;
++    size_t len;
++
++    if (ble == NULL || name == NULL) {
++        return OPRT_INVALID_PARM;
++    }
++    len = strlen(name);
++    if (len > TUYA_BLE_NAME_LEN) {
++        len = TUYA_BLE_NAME_LEN;
++    }
++    memset(ble->cfg.device_name, 0, sizeof(ble->cfg.device_name));
++    memcpy(ble->cfg.device_name, name, len);
++    ble->cfg.device_name[len] = '\0';
++    ble_adv_update(ble);
++    PR_NOTICE("ble device name: %s", ble->cfg.device_name);
++    {
++        extern int ble_svc_gap_device_name_set(const char *name);
++        (void)ble_svc_gap_device_name_set(ble->cfg.device_name);
++    }
++    return OPRT_OK;
++}
++
++/**
++ * @brief Keep BLE link for agent S:/P: transport (skip 30s pair timeout disconnect)
++ * @return none
++ */
++void tuya_ble_agent_keep_connection(void)
++{
++    tuya_ble_mgr_t *ble = s_ble_mgr;
++
++    if (ble == NULL) {
++        return;
++    }
++    tal_sw_timer_stop(ble->pair_timer);
++}
++
+ static void ble_pair_timeout_cb(TIMER_ID timer_id, void *arg)
+ {
+     tuya_ble_mgr_t *ble = (tuya_ble_mgr_t *)arg;
+@@ -401,12 +486,15 @@ static void ble_mointor_timer_cb(TIMER_ID timer_id, void *arg)
+         if (s_iot_conn_stat) {
+             return;
+         }
+-        if (ble->is_paired) {
++        if (tal_ble_agent_keep_adv()) {
++            PR_NOTICE("ble monitor: keep adv (agent transport, mqtt online)");
++            ble_adv_update(ble);
++        } else if (ble->is_paired) {
+             tal_ble_disconnect(ble->peer_info);
+         } else {
+             tal_ble_advertising_stop();
++            PR_DEBUG("ble monitor check iot is connected, stop adv!");
+         }
+-        PR_DEBUG("ble monitor check iot is connected, stop adv!");
+         s_iot_conn_stat = true;
+     } else {
+         if (!s_iot_conn_stat) {
+@@ -724,12 +812,12 @@ static int ble_pair_req(ble_packet_t *req, void *priv_data)
+ 
+     TUYA_CALL_ERR_GOTO(ble_packet_resp(ble, &resp), __exit);
+ 
+-    netmgr_status_e netstat = NETMGR_LINK_DOWN;
+-    if (OPRT_OK != netmgr_conn_get(NETCONN_AUTO, NETCONN_CMD_STATUS, &netstat)) {
+-        PR_ERR("get net status failed, use default %d", netstat);
+-    }
+-    PR_DEBUG("ble send netstat %d", netstat);
+-    TUYA_CALL_ERR_GOTO(tuya_ble_send(FRM_RPT_NET_STAT_REQ, 0, (uint8_t *)&netstat, 1), __exit);
++    netmgr_status_e netstat = NETMGR_LINK_DOWN;
++    if (OPRT_OK != netmgr_conn_get(NETCONN_AUTO, NETCONN_CMD_STATUS, &netstat)) {
++        PR_ERR("get net status failed, use default %d", netstat);
++    }
++    PR_DEBUG("ble send netstat %d", netstat);
++    TUYA_CALL_ERR_GOTO(tuya_ble_send(FRM_RPT_NET_STAT_REQ, 0, (uint8_t *)&netstat, 1), __exit);
+ 
+ __exit:
+     if (result == 1) {
+@@ -926,12 +1014,19 @@ static void ble_event_msg_free(TAL_BLE_EVT_PARAMS_T *msg)
+ static void tal_ble_event_callback(void *data)
+ {
+     tuya_ble_mgr_t *ble = s_ble_mgr;
++    TAL_BLE_EVT_PARAMS_T *msg = data;
+ 
+-    if (NULL == ble) {
++    if (NULL == msg) {
+         return;
+     }
+ 
+-    TAL_BLE_EVT_PARAMS_T *msg = data;
++    if (NULL == ble) {
++        tal_ble_agent_event_hook(msg);
++        if (data) {
++            ble_event_msg_free(data);
++        }
++        return;
++    }
+ 
+     PR_TRACE("rev ble event %d", msg->type);
+ 
+@@ -947,7 +1042,11 @@ static void tal_ble_event_callback(void *data)
+             memcpy(&ble->peer_info, &msg->ble_event.connect.peer, sizeof(TAL_BLE_PEER_INFO_T));
+             ble->recv_sn = 0;
+             ble->send_sn = 1;
+-            tal_sw_timer_start(ble->pair_timer, BLE_CONN_MONITOR_TIME, TAL_TIMER_ONCE);
++            if (tal_ble_agent_keep_adv()) {
++                tuya_ble_agent_keep_connection();
++            } else {
++                tal_sw_timer_start(ble->pair_timer, BLE_CONN_MONITOR_TIME, TAL_TIMER_ONCE);
++            }
+             PR_NOTICE("Ble Connected");
+         } else {
+             memset(&ble->peer_info, 0, sizeof(TAL_BLE_PEER_INFO_T));
+@@ -959,7 +1058,7 @@ static void tal_ble_event_callback(void *data)
+         memset(ble->pair_rand, 0x00, sizeof(ble->pair_rand));
+         tal_sw_timer_stop(ble->pair_timer);
+         ble->is_paired = false;
+-        if (!tuya_iot_is_connected()) {
++        if (!tuya_iot_is_connected() || tal_ble_agent_keep_adv()) {
+             ble_adv_update(ble);
+         }
+         PR_NOTICE("Ble Disonnected");
+@@ -970,10 +1069,16 @@ static void tal_ble_event_callback(void *data)
+         ble_packet_t packet;
+         TAL_BLE_DATA_T *report;
+ 
++        report = &msg->ble_event.write_report.report;
++
+         if (msg->ble_event.write_report.peer.char_handle[0] ==
+             ble->peer_info.char_handle[TAL_COMMON_WRITE_CHAR_INDEX]) {
+-            report = &msg->ble_event.write_report.report;
+             PR_TRACE("BLE Package len %d", report->len);
++            if (report->len >= 3 && report->p_data[1] == ':' &&
++                (report->p_data[0] == 'S' || report->p_data[0] == 'P' || report->p_data[0] == 'L')) {
++                /* Agent monitor lines handled in tkl GATT write path */
++                break;
++            }
+             ret = ble_packet_recv(ble, report->p_data, report->len, &packet);
+             if (OPRT_OK != ret) {
+                 if (ret != OPRT_SVC_BT_API_TRSMITR_CONTINUE) {
+@@ -996,6 +1101,8 @@ static void tal_ble_event_callback(void *data)
+         break;
+     }
+ 
++    tal_ble_agent_event_hook(msg);
++
+     if (data) {
+         ble_event_msg_free(data);
+         data = NULL;
+diff --git a/src/tuya_cloud_service/ble/ble_mgr.h b/src/tuya_cloud_service/ble/ble_mgr.h
+index 4cd42291..f267c3ea 100755
+--- a/src/tuya_cloud_service/ble/ble_mgr.h
++++ b/src/tuya_cloud_service/ble/ble_mgr.h
+@@ -33,7 +33,7 @@ typedef enum {
+     BLE_SESSION_MAX
+ } ble_seesion_type_t;
+ 
+-#define TUYA_BLE_NAME_LEN 5
++#define TUYA_BLE_NAME_LEN 15
+ 
+ typedef struct {
+     tuya_iot_client_t *client;
+@@ -127,6 +127,25 @@ void tuya_ble_enable_debug(bool enable);
+  */
+ void tuya_ble_raw_print(char *title, uint8_t width, uint8_t *buf, uint16_t size);
+ 
++/**
++ * @brief Restart BLE advertising (e.g. agent monitor wants PC connection)
++ * @return OPRT_OK on success
++ */
++int tuya_ble_adv_update(void);
++
++/**
++ * @brief Override BLE GAP advertised device name and refresh advertising
++ * @param[in] name null-terminated name (truncated to TUYA_BLE_NAME_LEN)
++ * @return OPRT_OK on success
++ */
++OPERATE_RET tuya_ble_set_device_name(CONST CHAR_T *name);
++
++/**
++ * @brief Cancel pair-timeout disconnect for agent line protocol clients
++ * @return none
++ */
++void tuya_ble_agent_keep_connection(void);
++
+ #ifdef __cplusplus
+ }
+ #endif
