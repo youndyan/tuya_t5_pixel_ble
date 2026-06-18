@@ -1,37 +1,52 @@
-# T5 Pixel Agent Monitor — BLE 版
+# T5 Pixel Agent Monitor（BLE 版）介绍与使用指南
 
-在 T5AI Pixel 32×32 矩阵屏上实时显示 **Cursor / Claude Code** 的 Agent 状态（Clawd 小螃蟹动画），支持 **蓝牙无线** + USB 串口双通道，以及按键遥控 IDE、语音转文字。
+> 适用硬件：涂鸦 **T5AI Pixel** 开发板（32×32 LED 矩阵 + OK / A / B 三键）
 
-| | |
-|---|---|
-| **固件版本** | `1.0.2-ble` |
-| **硬件** | TUYA T5AI Pixel |
-| **BLE 广播名** | `TYBLE_XXXX`（UUID 后 4 位，如 `TYBLE_A1B2`） |
-| **Bridge 端口** | `http://127.0.0.1:23340` |
+---
 
-## 功能一览
+## 一、这是什么？
 
-- Agent 状态屏：idle / thinking / working / juggling / notify / error / happy
-- **BLE 无线**连接 Mac/PC，连上后 Clawd **蓝色主题**
-- 按键：清除 / 退格 / 回车；Claude 权限审批（B/A/OK）
-- 长按 OK：云端 STT，文字粘贴到电脑
-- 主页 mao 动图 + 写轮眼、俄罗斯方块、贪吃蛇等娱乐模式
+**T5 Pixel Agent Monitor（BLE 版）** 是一块放在桌面上的 **AI 编程助手状态屏**：当你在 **Cursor / Claude Code** 里写代码、跑工具、等权限时，板子上的 **Clawd 小螃蟹** 会跟着切换动画（思考、敲键盘、抛球、报错等）。
+
+### 主要功能
+
+| 按键 | 操作 |
+|------|------|
+| **OK 单击** | 切换动画（特效 / 像素画 / 写轮眼等） |
+| **OK 双击** | **进入 Agent Monitor** |
+| **OK 长按** | 进入忍者跑酷 |
+| **A 单击** | 切换像素画 |
+| **A 双击** | 进入 AI 语音频谱模式 |
+| **A 长按** | 进入贪吃蛇 |
+| **B 长按** | 进入俄罗斯方块  |
+| **B 双击** | 进入沙盒模拟 |
 
 ## 快速开始
 
 ```bash
 # 1. 编译烧录（TuyaOpen 根目录已 source export.sh）
-cd apps/tuya_t5_pixel/tuya_t5_pixel_demo_ble
+cd apps/tuya_t5_pixel/tuya_t5_pixel_ble
 tos.py build
 tos.py flash -p /dev/cu.wchusbserialXXXX   # 先停 Bridge
 
 # 2. PC Bridge
 cd tools/pixel-agent-bridge-ble
-npm install && npm run setup:ble
-npm run scan:ble
-npm run bind:ble -- <address>   # 保存 chip 标签，防连错板
-npm run install-hooks
-npm run start:ble               # 多板环境推荐纯 BLE
+npm install                # 安装依赖
+npm run setup:ble          # 安装 Python bleak：pip install bleak
+
+npm run install-hooks      # 安装agent Hooks
+    - **Claude Code**：`~/.claude/settings.json`（含权限阻塞 `/permission`）
+    - **Cursor**：`~/.cursor/hooks.json`（仅状态同步）
+    - 若存在 Codex / Copilot 目录，也会尝试写入
+
+npm run scan:ble           # 扫描附件蓝牙设备
+npm run bind:ble -- "xxx"  # 绑定板子 
+
+
+常用启动方式：
+npm start                  #推荐**：BLE 连上走无线；断线时串口兜底 
+npm run start:ble          #仅蓝牙连接
+npm run start:serial       #仅串口
 
 # 3. 板子双击 OK → 进入 Agent 模式
 ```
@@ -45,17 +60,6 @@ npm run start:ble               # 多板环境推荐纯 BLE
 | **[docs/USER_GUIDE.zh-CN.md](docs/USER_GUIDE.zh-CN.md)** | **完整介绍与使用指南**（推荐给新用户） |
 | [docs/GITHUB_PUBLISH.md](docs/GITHUB_PUBLISH.md) | 发布与脱敏说明 |
 | [patches/README.md](patches/README.md) | TuyaOpen SDK 补丁 |
-
-## 与串口版 `tuya_t5_pixel_demo` 的区别
-
-| 项 | 串口版 | BLE 版（本项目） |
-|----|--------|------------------|
-| 版本 | 1.0.1 | 1.0.2-ble |
-| 传输 | USB 串口 | BLE + 串口 |
-| Bridge 端口 | 23335 | **23340** |
-| 配置目录 | `~/.pixel-agent-bridge/` | `~/.pixel-agent-bridge-ble/` |
-
-**不要**对两个项目同时运行 `install-hooks` 或同时启动两套 Bridge。
 
 ## Bridge 命令速查
 
@@ -76,18 +80,3 @@ tools/pixel-agent-bridge-ble/   # Node + Python BLE Bridge
 # dist/ 为本地编译产物，已 gitignore
 docs/USER_GUIDE.zh-CN.md
 ```
-
-## 授权配置（首次克隆）
-
-```bash
-cp include/pixel_agent_license.h.example include/pixel_agent_license.h
-# 编辑填入涂鸦平台申请的 UUID / AuthKey（勿提交到 Git）
-```
-
-## 发布到 GitHub
-
-见 **[docs/GITHUB_PUBLISH.md](docs/GITHUB_PUBLISH.md)**。SDK 补丁见 **[patches/](patches/)**。
-
-## 构建产物
-
-本地 `tos.py build` 后生成于 `dist/`（已 gitignore，不上传）。
