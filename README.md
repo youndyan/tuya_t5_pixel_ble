@@ -12,25 +12,25 @@
 
 | 按键 | 操作 |
 |------|------|
-| **OK 单击** | 切换动画（特效 / 像素画 / 写轮眼等） |
-| **OK 双击** | **进入 Agent Monitor** |
-| **OK 长按** | 进入忍者跑酷 |
-| **A 单击** | 切换像素画 |
-| **A 双击** | 进入 AI 语音频谱模式 |
-| **A 长按** | 进入贪吃蛇 |
-| **B 长按** | 进入俄罗斯方块  |
-| **B 双击** | 进入沙盒模拟 |
-
-视频展示：https://www.douyin.com/video/7652591946045865083
+| **OK 单击** | 切换动画（特效 / 像素画 / 写轮眼等）<br><img src="video/1.jpg" width="600"> |
+| **OK 双击** | **进入 Agent Monitor**<br><img src="video/4.jpg" width="600"> |
+| **OK 长按** | 进入忍者跑酷<br><img src="video/7.jpg" width="600"> |
+| **A 单击** | 切换像素画<br><img src="video/8.jpg" width="600"> |
+| **A 双击** | 进入 AI 语音频谱模式<br><img src="video/3.jpg" width="600"> |
+| **A 长按** | 进入贪吃蛇<br><img src="video/6.jpg" width="600"> |
+| **B 长按** | 进入俄罗斯方块<br><img src="video/5.jpg" width="600"> |
+| **B 双击** | 进入沙盒模拟<br><img src="video/2.jpg" width="600"> |
 
 ## 快速开始
 
 ```bash
 # 1. 编译烧录（TuyaOpen 根目录已 source export.sh）
-cd apps/tuya_t5_pixel/tuya_t5_pixel_ble
+cd apps/tuya_t5_pixel/tuya_t5_pixel_demo_ble
 tos.py build
 tos.py flash -p /dev/cu.wchusbserialXXXX   # 先停 Bridge
+```
 
+```bash
 # 2. PC Bridge
 cd tools/pixel-agent-bridge-ble
 npm install                # 安装依赖
@@ -51,17 +51,11 @@ npm run start:ble          #仅蓝牙连接
 npm run start:serial       #仅串口
 
 # 3. 板子双击 OK → 进入 Agent 模式
+健康检查：
+curl http://127.0.0.1:23340/health
 ```
 
-健康检查：`curl http://127.0.0.1:23340/health`
 
-## 文档
-
-| 文档 | 说明 |
-|------|------|
-| **[docs/USER_GUIDE.zh-CN.md](docs/USER_GUIDE.zh-CN.md)** | **完整介绍与使用指南**（推荐给新用户） |
-| [docs/GITHUB_PUBLISH.md](docs/GITHUB_PUBLISH.md) | 发布与脱敏说明 |
-| [patches/README.md](patches/README.md) | TuyaOpen SDK 补丁 |
 
 ## Bridge 命令速查
 
@@ -70,15 +64,34 @@ npm run start:dual          # 推荐
 npm run start:ble           # 仅 BLE
 npm run start:serial        # 仅串口
 npm run scan:ble            # 扫描 TYBLE（列出 address）
-npm run bind:ble -- <uuid>  # 绑定你的像素屏（防连错）
+npm run bind:ble -- "XXX"   # 绑定你的像素屏（防连错）
 npm run list-ports          # 列出 WCH 串口
 ```
+
+## 文档
+
+| 文档 | 说明 |
+|------|------|
+| **[docs/USER_GUIDE.zh-CN.md](docs/USER_GUIDE.zh-CN.md)** | **完整介绍与使用指南**（推荐给新用户） |
+| [patches/README.md](patches/README.md) | TuyaOpen SDK 补丁 |
+|  原始项目(https://github.com/tuya/TuyaOpen/blob/master/apps/tuya_t5_pixel/README_CN.md)  |
 
 ## 目录
 
 ```
-src/                    # 固件（tuya_main, pixel_agent_ble, clawd…）
-tools/pixel-agent-bridge-ble/   # Node + Python BLE Bridge
-# dist/ 为本地编译产物，已 gitignore
-docs/USER_GUIDE.zh-CN.md
+tuya_t5_pixel_demo_ble/
+├── app_default.config          # 构建配置（BLE、AI STT 等）
+├── src/
+│   ├── tuya_main.c             # 主程序、按键、模式切换
+│   ├── pixel_agent_bridge.c    # 串口行协议
+│   ├── pixel_agent_ble.c       # BLE 传输与主题
+│   └── pixel_agent_clawd.c     # Clawd GIF 渲染
+├── tools/pixel-agent-bridge-ble/
+│   ├── bridge.js               # HTTP 服务 + 串口 + BLE 调度
+│   ├── ble_bridge.py           # Bleak BLE 子进程
+│   ├── hooks/                  # IDE Hook 脚本
+│   └── install-hooks.js        # 一键安装 Hook
+├── dist/                       # 编译产物
+└── docs/
+    └── USER_GUIDE.zh-CN.md     # 文档
 ```
