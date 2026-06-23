@@ -6,20 +6,21 @@
 
 ## 一、这是什么？
 
-**T5 Pixel Agent Monitor（BLE 版）** 是一块放在桌面上的 **AI 编程助手状态屏**：当你在 **Cursor / Claude Code** 里写代码、跑工具、等权限时，板子上的 **Clawd 小螃蟹** 会跟着切换动画（思考、敲键盘、抛球、报错等）。
+**T5 Pixel Agent Monitor（BLE 版）** 是一块放在桌面上的 **AI 编程助手状态屏**：可通过串口和蓝牙连接  当你在 **Cursor / Claude Code** 里写代码、跑工具、等权限时，板子上的 **Clawd 小螃蟹** 会跟着切换动画（思考、敲键盘、抛球、报错等）
+还可以AI对话，玩游戏等。
 
 ### 主要功能
 
 | 按键 | 操作 |
 |------|------|
-| **OK 单击** | 切换动画（特效 / 像素画 / 写轮眼等）<br><img src="video/1.jpg" width="600"> |
-| **OK 双击** | **进入 Agent Monitor**<br><img src="video/4.jpg" width="600"> |
-| **OK 长按** | 进入忍者跑酷<br><img src="video/7.jpg" width="600"> |
-| **A 单击** | 切换像素画<br><img src="video/8.jpg" width="600"> |
-| **A 双击** | 进入 AI 语音频谱模式<br><img src="video/3.jpg" width="600"> |
-| **A 长按** | 进入贪吃蛇<br><img src="video/6.jpg" width="600"> |
-| **B 长按** | 进入俄罗斯方块<br><img src="video/5.jpg" width="600"> |
-| **B 双击** | 进入沙盒模拟<br><img src="video/2.jpg" width="600"> |
+| **OK 单击** | 切换动画（特效 / 像素画 / 写轮眼等）<br><img src="video/1.jpg" width="180"> |
+| **OK 双击** | **进入 Agent Monitor**<br><img src="video/4.jpg" width="180"> |
+| **OK 长按** | 进入忍者跑酷<br><img src="video/7.jpg" width="180"> |
+| **A 单击** | 切换像素画<br><img src="video/8.jpg" width="180"> |
+| **A 双击** | 进入 AI 语音频谱模式<br><img src="video/3.jpg" width="180"> |
+| **A 长按** | 进入贪吃蛇<br><img src="video/6.jpg" width="180"> |
+| **B 长按** | 进入俄罗斯方块<br><img src="video/5.jpg" width="180"> |
+| **B 双击** | 进入沙盒模拟<br><img src="video/2.jpg" width="180"> |
 
 ## 快速开始
 
@@ -73,7 +74,7 @@ npm run list-ports          # 列出 WCH 串口
 | 文档 | 说明 |
 |------|------|
 | **[docs/USER_GUIDE.zh-CN.md](docs/USER_GUIDE.zh-CN.md)** | **完整介绍与使用指南**（推荐给新用户） |
-| [patches/README.md](patches/README.md) | TuyaOpen SDK 补丁 |
+
 |  原始项目(https://github.com/tuya/TuyaOpen/blob/master/apps/tuya_t5_pixel/README_CN.md)  |
 
 ## 目录
