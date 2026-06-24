@@ -6,8 +6,7 @@
 
 ## 一、这是什么？
 
-**T5 Pixel Agent Monitor（BLE 版）** 是一块放在桌面上的 **AI 编程助手状态屏**：可通过串口和蓝牙连接  当你在 **Cursor / Claude Code** 里写代码、跑工具、等权限时，板子上的 **Clawd 小螃蟹** 会跟着切换动画（思考、敲键盘、抛球、报错等）
-还可以AI对话，玩游戏等。
+**T5 Pixel Agent Monitor（BLE 版）** 是一块放在桌面上的 **AI 编程助手状态屏**：当你在 **Cursor / Claude Code** 里写代码、跑工具、等权限时，板子上的 **Clawd 小螃蟹** 会跟着切换动画（思考、敲键盘、抛球、报错等）。
 
 ### 主要功能
 
@@ -52,11 +51,9 @@ npm run start:ble          #仅蓝牙连接
 npm run start:serial       #仅串口
 
 # 3. 板子双击 OK → 进入 Agent 模式
-健康检查：
-curl http://127.0.0.1:23340/health
 ```
 
-
+健康检查：`curl http://127.0.0.1:23340/health`
 
 ## Bridge 命令速查
 
@@ -74,8 +71,13 @@ npm run list-ports          # 列出 WCH 串口
 | 文档 | 说明 |
 |------|------|
 | **[docs/USER_GUIDE.zh-CN.md](docs/USER_GUIDE.zh-CN.md)** | **完整介绍与使用指南**（推荐给新用户） |
+| [patches/README.md](patches/README.md) | TuyaOpen SDK 补丁 |
 
-|  原始项目(https://github.com/tuya/TuyaOpen/blob/master/apps/tuya_t5_pixel/README_CN.md)  |
+原始项目(https://github.com/tuya/TuyaOpen/blob/master/apps/tuya_t5_pixel/README_CN.md)
+硬件开源地址(https://oshwhub.com/tuyaopen/tuya-t5-pixels)
+开发版购买(https://shorturl.asia/NLkcI)
+结构外壳3D打印(https://makerworld.com.cn/zh/models/1827760-tuya-t5-pixels-kai-yuan-ai-xiang-su-ping?from=search#profileId-2020811)
+
 
 ## 目录
 
