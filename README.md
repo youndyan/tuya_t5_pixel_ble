@@ -73,10 +73,13 @@ npm run list-ports          # 列出 WCH 串口
 | **[docs/USER_GUIDE.zh-CN.md](docs/USER_GUIDE.zh-CN.md)** | **完整介绍与使用指南**（推荐给新用户） |
 | [patches/README.md](patches/README.md) | TuyaOpen SDK 补丁 |
 
-原始项目(https://github.com/tuya/TuyaOpen/blob/master/apps/tuya_t5_pixel/README_CN.md)
-硬件开源地址(https://oshwhub.com/tuyaopen/tuya-t5-pixels)
-开发版购买(https://shorturl.asia/NLkcI)
-结构外壳3D打印(https://makerworld.com.cn/zh/models/1827760-tuya-t5-pixels-kai-yuan-ai-xiang-su-ping?from=search#profileId-2020811)
+原始项目：https://github.com/tuya/TuyaOpen/blob/master/apps/tuya_t5_pixel/README_CN.md
+
+硬件开源地址：https://oshwhub.com/tuyaopen/tuya-t5-pixels
+
+开发版购买：https://shorturl.asia/NLkcI
+
+结构外壳3D打印：https://makerworld.com.cn/zh/models/1827760-tuya-t5-pixels-kai-yuan-ai-xiang-su-ping?from=search#profileId-2020811
 
 
 ## 目录
